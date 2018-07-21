@@ -1,31 +1,27 @@
-module Main exposing (..)
+module Main exposing (main)
 
-import Debug exposing (..)
 import Html exposing (..)
-import Html.Events exposing (onClick)
 import Html.Attributes exposing (..)
+import Html.Events exposing (onClick)
 import String exposing (length, contains, toFloat)
-import Calc exposing (process)
-import Operator exposing (..)
-import Perform exposing (collapse)
+import Calc exposing (calculate, collapse, Operator(Plus, Minus, Times, DividedBy))
 
 
 type Input
-    = BuildOperand String
+    = BuildInput String
     | AddOperator Operator
     | Decimal
     | Equals
 
 
-inputToFloat : String -> Float
+inputToFloat : String -> Maybe Float
 inputToFloat str =
     case String.toFloat str of
         Ok num ->
-            num
+            Just num
 
         _ ->
-            -- handle Error case!
-            0
+            Nothing
 
 
 type alias Calculator =
@@ -39,7 +35,7 @@ init : ( Calculator, Cmd Input )
 init =
     ( { operands = []
       , operators = []
-      , currentInput = "0"
+      , currentInput = ""
       }
     , Cmd.none
     )
@@ -79,25 +75,25 @@ view calc =
                 , td [ operatorButton, onClick <| AddOperator DividedBy ] [ text "÷" ]
                 ]
             , tr []
-                [ td [ inputButton, onClick <| BuildOperand "7" ] [ text "7" ]
-                , td [ inputButton, onClick <| BuildOperand "8" ] [ text "8" ]
-                , td [ inputButton, onClick <| BuildOperand "9" ] [ text "9" ]
+                [ td [ inputButton, onClick <| BuildInput "7" ] [ text "7" ]
+                , td [ inputButton, onClick <| BuildInput "8" ] [ text "8" ]
+                , td [ inputButton, onClick <| BuildInput "9" ] [ text "9" ]
                 , td [ operatorButton, onClick <| AddOperator Times ] [ text "x" ]
                 ]
             , tr []
-                [ td [ inputButton, onClick <| BuildOperand "4" ] [ text "4" ]
-                , td [ inputButton, onClick <| BuildOperand "5" ] [ text "5" ]
-                , td [ inputButton, onClick <| BuildOperand "6" ] [ text "6" ]
+                [ td [ inputButton, onClick <| BuildInput "4" ] [ text "4" ]
+                , td [ inputButton, onClick <| BuildInput "5" ] [ text "5" ]
+                , td [ inputButton, onClick <| BuildInput "6" ] [ text "6" ]
                 , td [ operatorButton, onClick <| AddOperator Minus ] [ text "-" ]
                 ]
             , tr []
-                [ td [ inputButton, onClick <| BuildOperand "1" ] [ text "1" ]
-                , td [ inputButton, onClick <| BuildOperand "2" ] [ text "2" ]
-                , td [ inputButton, onClick <| BuildOperand "3" ] [ text "3" ]
+                [ td [ inputButton, onClick <| BuildInput "1" ] [ text "1" ]
+                , td [ inputButton, onClick <| BuildInput "2" ] [ text "2" ]
+                , td [ inputButton, onClick <| BuildInput "3" ] [ text "3" ]
                 , td [ operatorButton, onClick <| AddOperator Plus ] [ text "+" ]
                 ]
             , tr []
-                [ td [ inputButton, colspan 2, onClick <| BuildOperand "0" ] [ text "0" ]
+                [ td [ inputButton, colspan 2, onClick <| BuildInput "0" ] [ text "0" ]
                 , td [ inputButton, onClick <| Decimal ] [ text "." ]
                 , td [ operatorButton, onClick <| Equals ] [ text "=" ]
                 ]
@@ -105,29 +101,37 @@ view calc =
         ]
 
 
+addDecimal : String -> String
+addDecimal str =
+    if contains "." str then
+        str
+    else
+        str ++ "."
+
+
+buildInput : String -> String -> String
+buildInput str input =
+    case input of
+        "0" ->
+            str
+
+        other ->
+            input ++ str
+
+
 update : Input -> Calculator -> ( Calculator, Cmd Input )
 update input calc =
     case input of
-        BuildOperand str ->
+        BuildInput str ->
             ( { calc
-                | currentInput =
-                    case calc.currentInput of
-                        "0" ->
-                            str
-
-                        other ->
-                            calc.currentInput ++ str
+                | currentInput = buildInput str calc.currentInput
               }
             , Cmd.none
             )
 
         Decimal ->
             ( { calc
-                | currentInput =
-                    if contains "." calc.currentInput then
-                        calc.currentInput
-                    else
-                        calc.currentInput ++ "."
+                | currentInput = addDecimal calc.currentInput
               }
             , Cmd.none
             )
@@ -135,10 +139,15 @@ update input calc =
         AddOperator op ->
             let
                 operands =
-                    (inputToFloat calc.currentInput) :: calc.operands
+                    case inputToFloat calc.currentInput of
+                        Just f ->
+                            f :: calc.operands
+
+                        _ ->
+                            calc.operands
 
                 ( operators, result ) =
-                    process op calc.operators operands
+                    calculate op calc.operators operands
             in
                 ( { calc
                     | operands = result
@@ -151,7 +160,12 @@ update input calc =
         Equals ->
             let
                 memoryStack =
-                    collapse calc.operators <| (inputToFloat calc.currentInput) :: calc.operands
+                    case inputToFloat calc.currentInput of
+                        Just f ->
+                            collapse calc.operators <| f :: calc.operands
+
+                        _ ->
+                            collapse calc.operators calc.operands
             in
                 ( { calc
                     | operands = memoryStack

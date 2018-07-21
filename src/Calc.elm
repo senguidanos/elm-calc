@@ -1,8 +1,11 @@
 module Calc exposing (..)
 
-import Perform exposing (..)
-import Operator exposing (..)
-import Debug exposing (log)
+
+type Operator
+    = Plus
+    | Minus
+    | Times
+    | DividedBy
 
 
 precedence : Operator -> Int
@@ -21,8 +24,8 @@ precedence op =
             1
 
 
-process : Operator -> List Operator -> List Float -> ( List Operator, List Float )
-process op operators operands =
+calculate : Operator -> List Operator -> List Float -> ( List Operator, List Float )
+calculate op operators operands =
     case operators of
         [] ->
             ( op :: operators, operands )
@@ -37,6 +40,35 @@ process op operators operands =
 
                 _ ->
                     if precedence op <= precedence prevOp then
-                        ( [ op ], [] )
+                        calculate prevOp remainingOps <| collapse [ prevOp ] operands
                     else
-                        ( [ op ], [] )
+                        ( op :: operators, operands )
+
+
+collapse : List Operator -> List Float -> List Float
+collapse ops operands =
+    case operands of
+        [] ->
+            []
+
+        [ lhs ] ->
+            [ lhs ]
+
+        rhs :: lhs :: prevOperands ->
+            case ops of
+                [] ->
+                    operands
+
+                op :: prevOps ->
+                    case op of
+                        Plus ->
+                            collapse prevOps <| (lhs + rhs) :: prevOperands
+
+                        Minus ->
+                            collapse prevOps <| (lhs - rhs) :: prevOperands
+
+                        Times ->
+                            collapse prevOps <| (lhs * rhs) :: prevOperands
+
+                        DividedBy ->
+                            collapse prevOps <| (lhs / rhs) :: prevOperands
