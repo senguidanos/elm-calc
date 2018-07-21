@@ -25,7 +25,7 @@ inputToFloat str =
 
 
 type alias Calculator =
-    { operands : List Float
+    { memory : List Float
     , operators : List Operator
     , currentInput : String
     }
@@ -33,7 +33,7 @@ type alias Calculator =
 
 init : ( Calculator, Cmd Input )
 init =
-    ( { operands = []
+    ( { memory = []
       , operators = []
       , currentInput = ""
       }
@@ -52,7 +52,7 @@ displayResult currentInput memory =
                 x :: ys ->
                     if isInfinite x then
                         "Undefined"
-                    else if x == -99999999999.9 then
+                    else if x == -9999999999.9 then
                         "Error"
                     else
                         toString x
@@ -64,12 +64,9 @@ displayResult currentInput memory =
 view : Calculator -> Html Input
 view calc =
     div [ container ]
-        [ div [] [ text <| toString calc.operators ]
-        , div [] [ text <| toString calc.operands ]
-        , div [] [ text <| toString calc.currentInput ]
-        , table [ style [ ( "border-collapse", "collapse" ) ] ]
+        [ table [ style [ ( "border-collapse", "collapse" ) ] ]
             [ tr []
-                [ td [ output, colspan 4 ] [ text <| displayResult calc.currentInput calc.operands ] ]
+                [ td [ output, colspan 4 ] [ text <| displayResult calc.currentInput calc.memory ] ]
             , tr []
                 [ td [ colspan 3, inputButton ] []
                 , td [ operatorButton, onClick <| AddOperator DividedBy ] [ text "÷" ]
@@ -141,16 +138,16 @@ update input calc =
                 operands =
                     case inputToFloat calc.currentInput of
                         Just f ->
-                            f :: calc.operands
+                            f :: calc.memory
 
                         _ ->
-                            calc.operands
+                            calc.memory
 
                 ( operators, result ) =
                     calculate op calc.operators operands
             in
                 ( { calc
-                    | operands = result
+                    | memory = result
                     , operators = operators
                     , currentInput = ""
                   }
@@ -159,16 +156,16 @@ update input calc =
 
         Equals ->
             let
-                memoryStack =
+                result =
                     case inputToFloat calc.currentInput of
                         Just f ->
-                            collapse calc.operators <| f :: calc.operands
+                            collapse calc.operators <| f :: calc.memory
 
                         _ ->
-                            collapse calc.operators calc.operands
+                            collapse calc.operators calc.memory
             in
                 ( { calc
-                    | operands = memoryStack
+                    | memory = result
                     , operators = []
                     , currentInput = ""
                   }
@@ -193,7 +190,7 @@ main =
 container : Attribute a
 container =
     style
-        [ ( "margin-left", "100px" )
+        [ ( "margin", "50px" )
         , ( "font-family", "sans-serif" )
         ]
 
@@ -232,4 +229,5 @@ output =
         , ( "height", "50px" )
         , ( "padding-right", "20px" )
         , ( "cursor", "default" )
+        , ( "font-size", "24px" )
         ]

@@ -24,25 +24,43 @@ precedence op =
             1
 
 
+validate : Float -> Float
+validate f =
+    if (String.length <| toString f) > 10 then
+        overflow
+    else
+        f
+
+
+overflow : Float
+overflow =
+    -9999999999.9
+
+
 calculate : Operator -> List Operator -> List Float -> ( List Operator, List Float )
 calculate op operators operands =
-    case operators of
+    case operands of
         [] ->
-            ( op :: operators, operands )
+            ( [], [] )
 
-        prevOp :: remainingOps ->
-            case op of
-                Plus ->
-                    ( [ op ], collapse operators operands )
+        _ ->
+            case operators of
+                [] ->
+                    ( op :: operators, operands )
 
-                Minus ->
-                    ( [ op ], collapse operators operands )
+                prevOp :: remainingOps ->
+                    case op of
+                        Plus ->
+                            ( [ op ], collapse operators operands )
 
-                _ ->
-                    if precedence op <= precedence prevOp then
-                        calculate prevOp remainingOps <| collapse [ prevOp ] operands
-                    else
-                        ( op :: operators, operands )
+                        Minus ->
+                            ( [ op ], collapse operators operands )
+
+                        _ ->
+                            if precedence op <= precedence prevOp then
+                                calculate prevOp remainingOps <| collapse [ prevOp ] operands
+                            else
+                                ( op :: operators, operands )
 
 
 collapse : List Operator -> List Float -> List Float
@@ -52,7 +70,7 @@ collapse ops operands =
             []
 
         [ lhs ] ->
-            [ lhs ]
+            [ validate lhs ]
 
         rhs :: lhs :: prevOperands ->
             case ops of
